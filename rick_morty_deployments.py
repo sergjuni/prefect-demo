@@ -1,6 +1,6 @@
 import httpx
 from prefect import flow, task, get_run_logger, serve
-import time
+from prefect.exceptions import FlowRunWaitTimeout
 
 
 @task
@@ -11,9 +11,16 @@ def get_api_info(url: str):
     return url_info
 
 
+@task(retries=2, retry_delay_seconds=10, timeout_seconds=0.01)
+def get_api_info_timeout(url: str):
+    response = httpx.get(url)
+    response.raise_for_status()
+    url_info = response.json()
+    return url_info
 
 
-@flow()
+
+@flow
 def get_rick_and_morty_characters_info():
     logger = get_run_logger()
     url = 'https://rickandmortyapi.com/api/character'
@@ -21,12 +28,18 @@ def get_rick_and_morty_characters_info():
     logger.info(api_info)
 
 
-@flow()
+@flow
 def get_rick_morty_episode_list():
     logger = get_run_logger()
     url = 'https://rickandmortyapi.com/api/episode'
-    api_info = get_api_info(url)
-    logger.info(api_info)
+    try:
+        api_info = get_api_info_timeout(url)
+        logger.info(api_info)
+    except Exception as e:
+        logger.error(f"Something went wrong while getting info from the api:"
+                     f"{e}")
+    except FlowRunWaitTimeout as e:
+        logger.error(f"Timeout Error: {e}")
 
 
 if __name__ == "__main__":

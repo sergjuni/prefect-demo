@@ -3,6 +3,9 @@ from prefect import flow, task, get_run_logger, serve
 from prefect.exceptions import FlowRunWaitTimeout
 
 
+base_url = 'https://rickandmortyapi.com/api'
+
+
 @task
 def get_api_info(url: str):
     response = httpx.get(url)
@@ -19,11 +22,10 @@ def get_api_info_timeout(url: str):
     return url_info
 
 
-
 @flow
 def get_rick_and_morty_characters_info():
     logger = get_run_logger()
-    url = 'https://rickandmortyapi.com/api/character'
+    url = f'{base_url}/character'
     api_info = get_api_info(url)
     logger.info(api_info)
 
@@ -31,7 +33,7 @@ def get_rick_and_morty_characters_info():
 @flow
 def get_rick_morty_episode_list():
     logger = get_run_logger()
-    url = 'https://rickandmortyapi.com/api/episode'
+    url = f'{base_url}/episode'
     try:
         api_info = get_api_info_timeout(url)
         logger.info(api_info)
